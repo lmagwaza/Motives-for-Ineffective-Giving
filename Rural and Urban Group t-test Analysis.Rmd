@@ -1,0 +1,158 @@
+---
+title: "Rural and Urban group t-test analysis"
+author: "Luvuyo Magwaza"
+date: '2022-08-16'
+output: html_document
+---
+### Load in libraries 
+```{r}
+library(tidyverse)
+```
+
+### Load in data sets 
+```{r}
+urban_group <- read_csv("/Users/lmagwaza/Google Drive/USF Semesters /Urban Group Data /Clean CSVFILE.csv")
+rural_group_few <- read_csv("~/Google Drive/USF Semesters /Semesters/2022 Fall/Rural Group Summer Work / rural_group_few.csv")
+
+```
+
+### Data Cleaning 
+```{r}
+summary(urban_group)
+str(urban_group)
+# drop all not applicable observations 
+urban_group %>% 
+  select(Country_living, Q144, Age:Gender, Race, Familysize, Religion, ends_with("_2"), Char_Generosity:William, -(SubjectiveSES_3_2), -(Enjoy_activities_2), -(PersonalExperience_2), -(PassionProblem_2)) -> urban_group_few
+  
+
+# renaming some variables 
+urban_group_few %>% 
+   rename(Level_of_education = ObjectiveSES_2,
+         Hh_income_pa = ObjectiveSES_1, Family_size = Familysize, N_generosity = N_Generosity2) -> urban_group_few
+
+# dropping observations that are missing 
+urban_group_few %>% 
+  rename(Residential_area = "Q144") %>% 
+  drop_na() -> urban_group_few
+
+# creating factors 
+urban_group_few$Level_of_education <- as.factor(urban_group_few$Level_of_education)
+urban_group_few$Hh_income_pa <- as.factor(urban_group_few$Hh_income_pa)
+urban_group_few$Gender <- as.factor(urban_group_few$Gender)
+urban_group_few$Race <- as.factor(urban_group_few$Race)
+urban_group_few$Family_size <- as.factor(urban_group_few$Family_size)
+urban_group_few$Religion <- as.factor(urban_group_few$Religion)
+
+# Creating a tibble for the charitable and norm giving tasks 
+urban_group_few %>% 
+  select(Char_Community_2:Char_CauseArea_2) %>% #Starting with charitable choice  
+  summarise(Community = mean(Char_Community_2),
+            Country = mean(Char_Country_2),
+            Ideology = mean(Char_Ideology_2),
+            Religion = mean(Char_Religion_2),
+            Generation = mean(Char_Generation_2),
+            Species = mean(Char_Species_2),
+            Cause_Affliction = mean(Char_CausePriority_2),
+            Cause_Passion = mean(Char_CauseArea_2))
+# Finding the standard deviation of each giving task
+urban_group_few %>% 
+  select(Char_Community_2:Char_CauseArea_2) %>% 
+  summarise(Community = sd(Char_Community_2),
+            Country = sd(Char_Country_2),
+            Ideology = sd(Char_Ideology_2),
+            Religion = sd(Char_Religion_2),
+            Generation = sd(Char_Generation_2),
+            Species = sd(Char_Species_2),
+            Cause_Affliction = sd(Char_CausePriority_2),
+            Cause_Passion = sd(Char_CauseArea_2))
+
+tibble(Giving_Task = c("Community", "Country", "Ideology", "Religion", "Generation", "Species", "Cause_Affliction", "Cause_Passion"),
+       Mean        = c(60, 41,	48,	61,	38,	38,	55,	50),
+       Sd          = c(28.65572,	31.14112,	33.50976,	27.46828,	31.40381,	28.67887,	26.99112,	28.11517))  -> Char_choice_urban
+
+# Norm charitable choice 
+urban_group_few %>% 
+  select(Norm_Community_2:Norm_AidTypePriority_2) %>% # Norm choice  
+  summarise(Community = mean(Norm_Community_2),
+            Country = mean(Norm_Country_2),
+            Ideology = mean(Norm_Ideology_2),
+            Religion = mean(Norm_Religion_2),
+            Generation = mean(Norm_Generation_2),
+            Species = mean(Norm_Species_2),
+            Cause_Affliction = mean(Norm_CausPriority_2),
+            Cause_Passion = mean(Norm_AidTypePriority_2))
+
+urban_group_few %>% 
+  select(Norm_Community_2:Norm_AidTypePriority_2) %>% # Norm choice  
+  summarise(Community = sd(Norm_Community_2),
+            Country = sd(Norm_Country_2),
+            Ideology = sd(Norm_Ideology_2),
+            Religion = sd(Norm_Religion_2),
+            Generation = sd(Norm_Generation_2),
+            Species = sd(Norm_Species_2),
+            Cause_Affliction = sd(Norm_CausPriority_2),
+            Cause_Passion = sd(Norm_AidTypePriority_2))
+
+tibble(Giving_Task = c("Community", "Country", "Ideology", "Religion", "Generation", "Species", "Cause_Affliction", "Cause_Passion"),
+       Mean        = c(51, 35,	45,	53,	34,	37,	56,	53),
+       Sd          = c(29.93213,	30.32232,	33.7057,	29.79913,	30.10738,	28.97453,	27.64108,	27.32182
+))  -> Norm_choice_urban # Rounding off two decimal places 
+
+# Creating standard error and confidence interval values for Char_choice and Norm_choice tibbles 
+Char_choice_urban %>% 
+  mutate(Se = Sd/sqrt(n())) %>% 
+  mutate(CI = 1.96 * Se) -> Char_choice_urban
+  
+
+Norm_choice_urban %>% 
+  mutate(Se = Sd/sqrt(n())) %>% 
+  mutate(CI = 1.96 * Se) -> Norm_choice_urban
+```
+
+
+### Merging rural and urban data 
+```{r}
+# making sure that all of the columns are the same in each data set
+urban_group_few %>% 
+  select(Country_living:Race, Religion:N_generosity) -> urban_group_merge
+
+rural_group_few %>% 
+  select(Country_living, Residential_area, Age, Level_of_education, Hh_income_pa, Gender, Race, Religion, Char_Community_2, Char_Country_2, Char_Ideology_2, Char_Religion_2, Char_Generation_2, Char_Species_2, Char_CausePriority_2, Char_CauseArea_2, Norm_Community_2, Norm_Country_2,  Norm_Ideology_2, Norm_Religion_2, Norm_Generation_2, Norm_Species_2, Norm_CausPriority_2, Norm_AidTypePriority_2, Char_Generosity, N_generosity) -> rural_group_merge
+
+# merging the data sets 
+merged_dataset <- rbind(rural_group_merge, urban_group_merge)
+merged_dataset
+
+```
+
+
+### Doing t-test: personal charitable donation choice 
+
+```{r}
+  t.test(merged_dataset$Char_Community_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # community 
+  t.test(merged_dataset$Char_Country_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # country 
+  t.test(merged_dataset$Char_Ideology_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # ideology
+  t.test(merged_dataset$Char_Religion_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # religion
+  t.test(merged_dataset$Char_Generation_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # generation
+  t.test(merged_dataset$Char_Species_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # species 
+  t.test(merged_dataset$Char_CausePriority_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # cause_priority
+  t.test(merged_dataset$Char_CauseArea_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # cause_area 
+  
+
+```
+
+### Doing t-test: norm charitable choice
+```{r}
+  t.test(merged_dataset$Norm_Community_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # community 
+  t.test(merged_dataset$Norm_Country_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # country 
+  t.test(merged_dataset$Norm_Ideology_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # ideology
+  t.test(merged_dataset$Norm_Religion_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # religion
+  t.test(merged_dataset$Norm_Generation_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # generation
+  t.test(merged_dataset$Norm_Species_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # species
+  t.test(merged_dataset$Norm_CausPriority_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # cause_priority
+  t.test(merged_dataset$Norm_AidTypePriority_2 ~ merged_dataset$Residential_area, var.equal = FALSE) # cause_area 
+  
+```
+
+
+
