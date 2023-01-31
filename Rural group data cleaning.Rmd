@@ -1,0 +1,60 @@
+---
+title: "Rural group data cleaning"
+author: "Luvuyo Magwaza"
+date: "2022-11-01"
+output: html_document
+---
+
+### Loading libraries
+```{r}
+library(tidyverse)
+library(haven)
+```
+
+### Loading in dataset 
+```{r}
+rural_main_dataset <- read_csv("~/Google Drive/USF Semesters /Semesters/2022 Fall/Rural Group Summer Work /(SA) - tGiver Motives Across Cultures - Rural Group_July 27, 2022_10.19.csv")
+
+glimpse(rural_main_dataset)
+
+```
+
+### Data cleaning 
+```{r}
+# Dropping incompletes and selecting variables of interest 
+rural_main_dataset %>% 
+  filter(Finished == "TRUE") %>% 
+  select(Age:Gender, Race, family_size:Religion, starts_with("Char_"), -ends_with("_1"),Char_Generosity, N_Generosity2, Anika:William, Acountry_match,
+         Wcountry_match, Areligion_match, Wreligion_match, Afamily_match, Wfamily_match, Ahobby_match, Whobby_match, Aaffliction_match, Waffliction_match,
+         `Anika_y%`, `William_y%`, Anika_xfold, William_xfold, ObjectiveSES_2, -(Political_orient:Tax_importance), ObjectiveSES_1) -> rural_variables_of_interest_dataset
+
+# Generating variables of interest & renaming variables 
+rural_variables_of_interest_dataset %>% 
+  mutate(Urban = 0,
+         Sex = if_else(Gender == "Male", 1, 0)) %>% 
+  rename(Family_size = family_size, 
+         Income_Hh = ObjectiveSES_1,
+         Norms_generosity = N_Generosity2, 
+         Level_of_education = ObjectiveSES_2,
+         Personal_generosity = Char_Generosity, 
+         Anika_y_perct = `Anika_y%`, 
+         William_y_perct = `William_y%`,
+         Community = Char_Community_2,
+         Country = Char_Country_2,
+         Ideology = Char_Ideology_2,
+         Religion = Char_Religion_2,
+         Generation = Char_Generation_2,
+         Species = Char_Species_2,
+         Cause_Affliction = Char_CausePriority_2,
+         Cause_Passion = Char_CauseArea_2,
+         Religion_affiliation = Religion) -> rural_variables_of_interest_dataset 
+
+```
+
+### Saving new data frames 
+```{r}
+write.csv(rural_variables_of_interest_dataset,"/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/rural_variables_of_interest_dataset.csv", row.names = FALSE)
+write.csv(rural_main_dataset,"/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/rural_main_dataset.csv", row.names = FALSE)
+```
+
+
