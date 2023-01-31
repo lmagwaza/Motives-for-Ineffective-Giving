@@ -1,0 +1,57 @@
+---
+title: 'Making Graphs: Thesis'
+author: "Luvuyo Magwaza"
+date: "2022-11-04"
+output: html_document
+---
+### Load libraries 
+```{r}
+library(tidyverse)
+library(haven)
+```
+
+### Load in dataset
+```{r}
+clean_merged_rural_urban_dataset <- read_csv("/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/clean_merged_rural_urban_dataset.csv")
+glimpse(clean_merged_rural_urban_dataset)
+```
+
+### Making graphs 
+```{r}
+# creating longer data set so I can make graphs 
+longer_clean_dataset <- clean_merged_rural_urban_dataset %>% # creating longer dataset so I can make graphs 
+  pivot_longer(Community:Cause_Passion, names_to = "Giving_task", values_to = "Perct_donated") %>% 
+  select(Giving_task, Perct_donated, Urban)
+print(longer_clean_dataset)
+
+# creating grouped data
+longer_clean_dataset %>% 
+  group_by(Urban, Giving_task) %>% 
+  mutate(count = length(Perct_donated)) %>% 
+  summarise(mean = mean(Perct_donated),
+            sd = sd(Perct_donated)) %>% 
+  mutate(Se = sd/sqrt(237)) %>% 
+  mutate(CI = 1.96 * Se) -> rural_urban_graphing_data
+
+```
+
+```{r}
+# creating the graph for giving task questions
+rural_urban_graphing_data %>% 
+  mutate(Group = ifelse(Urban == 0, "Rural", "Urban")) %>% 
+  mutate(Giving_task = fct_reorder(Giving_task, mean)) %>% 
+  mutate_if(is.numeric, round, digits = 0) %>%
+  ggplot(aes(x = Giving_task, y = mean, fill = Group)) +
+  geom_bar(stat = "identity", alpha=0.9, position = "dodge", width = 0.6) +
+  theme(axis.text.x = element_text(angle = 90)) +
+  ylim(0, 100) +
+  geom_errorbar(aes(x = Giving_task, ymin = mean - CI, ymax = mean + CI, group = Group), color = "black", size = 0.2, width = 0.4,
+                position=position_dodge(0.6)) +
+  geom_text(aes(label = mean, group = Group), size = 3, vjust = 3.2, color = "black", position = position_dodge(.6)) +
+  labs(title = "Urban vs Rural Donation Patterns", 
+       subtitle = "Percentage donated to effective charity",
+       y = "Percentage donated", 
+       x = "") 
+ggsave("Urban Rural Donation Graphic", device = jpeg, dpi = 400, width = 8, height = 5)
+```
+
