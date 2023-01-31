@@ -1,0 +1,53 @@
+---
+title: "Merged rural and urban group Nov"
+author: "Luvuyo Magwaza"
+date: "2022-11-02"
+output: html_document
+---
+### Loading libraries 
+```{r}
+library(tidyverse)
+library(haven)
+```
+
+### Load in datasets 
+```{r}
+rural_variables_of_interest_dataset <- read_csv("/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/rural_variables_of_interest_dataset.csv")
+
+urban_variables_of_interest_dataset <- read_csv("/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/urban_variables_of_interest_dataset.csv")
+
+glimpse(rural_variables_of_interest_dataset)
+summary(urban_variables_of_interest_dataset)
+```
+
+
+### Merging rural and urban Group datasets 
+```{r}
+merged_rural_urban_dataset <-  rbind(urban_variables_of_interest_dataset, rural_variables_of_interest_dataset)
+glimpse(merged_rural_urban_dataset)
+structure(merged_rural_urban_dataset)
+summary(merged_rural_urban_dataset)
+```
+
+### Summary stats of data
+```{r}
+glimpse(merged_rural_urban_dataset)
+summary(merged_rural_urban_dataset) # everything looks good
+```
+
+### Cleaning merged data 
+```{r}
+merged_rural_urban_dataset %>% 
+  filter(!is.na(Family_size), # removing all of the NA's that should not be in the data set and values that do not make sense considering the survey design
+         William != 8050.0) %>% 
+  
+  mutate(Education = if_else(Level_of_education == "Bachelor's degree in college (4-year)", 1, 0),
+         Education = if_else(is.na(Education), 1, Education))-> clean_merged_rural_urban_dataset # adding an indicator variable for education level, equals 1 if observation has at least a bachelors education
+
+```
+
+### Saving cleaned dataset 
+```{r}
+write.csv(clean_merged_rural_urban_dataset,"/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/clean_merged_rural_urban_dataset.csv", row.names = FALSE)
+```
+
