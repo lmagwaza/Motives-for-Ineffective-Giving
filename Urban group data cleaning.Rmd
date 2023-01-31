@@ -1,0 +1,130 @@
+---
+title: "Urban group cleaning (text)"
+author: "Luvuyo Magwaza"
+date: "2022-11-01"
+output:
+  html_document: default
+  pdf_document: default
+---
+### Loading libraries 
+```{r}
+library(tidyverse)
+library(haven)
+```
+
+### Loading in dataset 
+```{r}
+
+nov_10_screener_main_dataset <- read_csv("/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/(SA) Giver Motives Across Cultures SCREENER SURVEY - SOUTH AFRICAN Urban Group - Copy_November 11, 2022_13.08.csv") # data set that has the demographics variables for the whole urban population.
+summary(nov_10_screener_main_dataset)
+ 
+urban_main_dataset <- read_csv("/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/Nov 11 SA Giver Motives dataset.csv")
+glimpse(urban_main_dataset) # urban data, missing the demographics variables. 
+```
+
+### Changing data so that it becomes tidy
+```{r}
+# making all of the variables become tidy data
+urban_main_dataset %>% 
+  # creating a single Race variable.
+  mutate(Race = case_when(Race_1 == "White" ~ "White",
+                          Race_2 =="Black" ~ "Black",
+                          Race_3 == "Indian/Asian" ~ "Indian/Asian",
+                          Race_4 == "Coloured" ~ "Coloured",
+                          Race_7 == "Other" ~ "Other"
+                          )) %>% 
+  # creating a single cculture variable
+  mutate(Culture = case_when(Culture_1 == "People who live near me" ~ "People who live near me",
+                             Culture_2 == "People who share my same ethnicity/race" ~ "People who share my same ethnicity/race",
+                             Culture_3 == "People who are in my religious community" ~ "People who are in my religious community",
+                             Culture_4 == "My close friends and family" ~ "My close friends and family",
+                             Culture_5 == "People in my province" ~ "People in my province",
+                             Culture_6 == "People in South Africa" ~ "People in South Africa",
+                             Culture_7 == "People in my same social class" ~ "People in my same social class",
+                             Culture_8 == "Other" ~ "Other")) %>% 
+  # removing the variables that I am not interested in. This will help make the merge easier. 
+  select(-(Culture_1:Culture_8), -(Country_Origin:"Residential Live"), -(Race_1:Race_7)) -> urban_main_dataset
+
+# going to merge this with the rest of the demographic screener data 
+urban_main_dataset %>% 
+  select(ObjectiveSES_1, ObjectiveSES_2, PROLIFIC_PID) -> merge_with_screener_data
+  
+  
+  
+```
+
+
+### Merging screener demographic data with the screener demographic data that prolific isolated 
+```{r}
+# selecting the demographic variables that I am interested in, ones I will be using for the merge. 
+nov_10_screener_main_dataset %>% 
+  select(ObjectiveSES_1, ObjectiveSES_2, PROLIFIC_PID) %>% 
+  rbind( merge_with_screener_data) %>% 
+  select(ObjectiveSES_1, ObjectiveSES_2, PROLIFIC_PID) %>% 
+  filter(ObjectiveSES_2 == "Bachelor's degree in college (4-year)" | ObjectiveSES_2 == "Master's degree" | ObjectiveSES_2 == "Doctoral degree" |
+         ObjectiveSES_2 == "Professional degree (JD, MD)") -> nov_10_screener_main_dataset
+
+
+```
+
+### Data cleaning 
+```{r}
+# Dropping incompletes and selecting variables of interest 
+urban_main_dataset %>% 
+  filter(Finished == "TRUE",
+         IPAddress != "NA",
+         Anika != 8050,
+         Anika != "NA",
+         Age != 99) %>% 
+  select(Age:Gender, Race, family_size:Religion, starts_with("Char_"), -ends_with("_1"),Char_Generosity, N_Generosity2, Anika:William, Acountry_match,
+         Wcountry_match, Areligion_match, Wreligion_match, Afamily_match, Wfamily_match, Ahobby_match, Whobby_match, Aaffliction_match, Waffliction_match,
+         `Anika_y%`, `William_y%`, Anika_xfold, William_xfold, PROLIFIC_PID) -> urban_variables_of_interest_dataset
+
+# Generating variables of interest & renaming variables 
+urban_variables_of_interest_dataset %>% 
+  mutate(Urban = 1,
+         Level_of_education = NA,
+         Sex = if_else(Gender == "Male", 1, 0)) %>% 
+  rename(Family_size = family_size, 
+         Norms_generosity = N_Generosity2,
+         Personal_generosity = Char_Generosity, 
+         Anika_y_perct = `Anika_y%`, 
+         William_y_perct = `William_y%`,
+         Community = Char_Community_2,
+         Country = Char_Country_2,
+         Ideology = Char_Ideology_2,
+         Religion = Char_Religion_2,
+         Generation = Char_Generation_2,
+         Species = Char_Species_2,
+         Cause_Affliction = Char_CausePriority_2,
+         Cause_Passion = Char_CauseArea_2,
+         Religion_affiliation = Religion) -> urban_variables_of_interest_dataset # education and income not included in sample
+
+
+
+```
+
+
+
+### Merging Screener and main dataset
+```{r}
+
+urban_variables_of_interest_dataset %>% 
+  left_join(nov_10_screener_main_dataset, by = c("PROLIFIC_PID")) %>% 
+  # removing missing observations
+  filter(ObjectiveSES_2 != "NA") %>% 
+  rename(Income_Hh = ObjectiveSES_1) %>% 
+  # removing variables I do not need 
+  select(-(ObjectiveSES_2), -(PROLIFIC_PID))-> urban_variables_of_interest_dataset
+
+  
+```
+
+
+
+### Saving new data frames 
+```{r}
+write.csv(urban_variables_of_interest_dataset,"/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/urban_variables_of_interest_dataset.csv", row.names = FALSE)
+write.csv(urban_main_dataset,"/Users/lmagwaza/Google Drive/USF Semesters /Semesters/2022 Fall/Urban Group/urban_main_dataset.csv", row.names = FALSE)
+```
+
